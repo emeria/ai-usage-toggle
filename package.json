@@ -1,0 +1,103 @@
+{
+  "name": "ai-usage-toggle",
+  "displayName": "AI Usage Toggle",
+  "description": "Switch between account/subscription and API-key usage for Claude, Gemini, and OpenAI from the status bar.",
+  "version": "0.0.1",
+  "publisher": "emeria",
+  "license": "MIT",
+  "icon": "icon.png",
+  "repository": { "type": "git", "url": "https://github.com/emeria/ai-usage-toggle.git" },
+  "bugs": { "url": "https://github.com/emeria/ai-usage-toggle/issues" },
+  "homepage": "https://github.com/emeria/ai-usage-toggle#readme",
+  "keywords": ["claude", "gemini", "openai", "codex", "api key", "account", "switch", "status bar", "chat history"],
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Other"],
+  "main": "./out/extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "configuration": {
+      "title": "AI Usage Toggle",
+      "properties": {
+        "aiUsageToggle.order": {
+          "type": "array",
+          "uniqueItems": true,
+          "default": ["claude-max", "claude-api"],
+          "items": { "type": "string" },
+          "markdownDescription": "Modes the toggle cycles through, in order. Only modes listed here are enabled. Built-in ids: `claude-max`, `claude-api`, `gemini-account`, `gemini-api`, `openai-account`, `openai-api`. Local instances are `local:<name>`. Account modes clear that provider's key; API modes inject `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, or `OPENAI_API_KEY`."
+        },
+        "aiUsageToggle.profiles": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "object",
+            "required": ["name", "type"],
+            "properties": {
+              "name": { "type": "string", "description": "Shown in the status bar and lists. The mode id is `p:<name>`." },
+              "type": { "type": "string", "enum": ["account", "api", "local"], "description": "account: subscription login; api: a key stored in the credential vault; local: an OpenAI-compatible server." },
+              "provider": { "type": "string", "enum": ["claude", "gemini", "openai"], "description": "Required for account and api profiles." },
+              "configDir": { "type": "string", "description": "Account only: separate login folder, set as CLAUDE_CONFIG_DIR (claude), CODEX_HOME (openai), or GEMINI_CLI_HOME (gemini) so you can keep a second account." },
+              "baseUrl": { "type": "string", "description": "Local only: endpoint such as http://localhost:11434/v1 (Ollama) or http://localhost:1234/v1 (LM Studio)." },
+              "apiKey": { "type": "string", "description": "Local only: optional placeholder key (defaults to `local`). Plain text in settings, so never a real secret." },
+              "env": { "type": "object", "additionalProperties": { "type": "string" }, "description": "Extra environment variables injected while this profile is active." },
+              "icon": { "type": "string", "description": "Optional codicon name for the status bar, e.g. `briefcase`, `home`, `rocket`." }
+            }
+          },
+          "markdownDescription": "Named profiles: add as many accounts, API keys, and local servers as you like. Use **AI Usage: Add Profile** to create one, then they appear in **Choose Modes** and can be ordered in `aiUsageToggle.order`. API keys are stored in the OS credential vault, not here."
+        },
+        "aiUsageToggle.clickBehavior": {
+          "type": "string",
+          "enum": ["cycle", "menu"],
+          "default": "cycle",
+          "description": "What clicking the status bar item does: switch to the next mode, or open a pick list."
+        },
+        "aiUsageToggle.sync.sessionLimit": {
+          "type": "number",
+          "default": 30,
+          "description": "How many recent chats to list per tool in the AI Chat Sync view."
+        },
+        "aiUsageToggle.sync.maxChars": {
+          "type": "number",
+          "default": 60000,
+          "description": "Character budget for a converted chat (rough token cap). Newest turns are kept."
+        }
+      }
+    },
+    "commands": [
+      { "command": "aiUsageToggle.toggle", "title": "AI Usage: Toggle Mode" },
+      { "command": "aiUsageToggle.pickMode", "title": "AI Usage: Pick Mode" },
+      { "command": "aiUsageToggle.chooseModes", "title": "AI Usage: Choose Modes" },
+      { "command": "aiUsageToggle.addProfile", "title": "AI Usage: Add Profile" },
+      { "command": "aiUsageToggle.setApiKey", "title": "AI Usage: Set API Key" },
+      { "command": "aiUsageToggle.clearApiKey", "title": "AI Usage: Clear API Key" },
+      { "command": "aiUsageToggle.refreshChats", "title": "AI Usage: Refresh Chats", "icon": "$(refresh)" },
+      { "command": "aiUsageToggle.pickUpChat", "title": "Pick Up in Other Tool", "icon": "$(arrow-right)" }
+    ],
+    "views": {
+      "explorer": [
+        { "id": "aiUsageToggle.chats", "name": "AI Chat Sync" }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        { "command": "aiUsageToggle.refreshChats", "when": "view == aiUsageToggle.chats", "group": "navigation" }
+      ],
+      "view/item/context": [
+        { "command": "aiUsageToggle.pickUpChat", "when": "view == aiUsageToggle.chats && viewItem == chat", "group": "inline" },
+        { "command": "aiUsageToggle.pickUpChat", "when": "view == aiUsageToggle.chats && viewItem == chat", "group": "1_sync" }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile",
+    "test": "tsc -p ./ && node --test out/",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.0.0",
+    "typescript": "^5.4.0"
+  }
+}
