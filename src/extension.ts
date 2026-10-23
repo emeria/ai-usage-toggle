@@ -109,6 +109,27 @@ const byId = (id: string) => allModes().find((m) => m.id === id);
 
 let statusItem: vscode.StatusBarItem;
 
+/** Values our managed vars had in the extension host before we touched them, restored when a mode drops them. */
+const originalEnv = new Map<string, string | undefined>();
+
+/**
+ * environmentVariableCollection only reaches integrated terminals. The Claude Code (and other) extensions spawn
+ * their CLIs from the extension host, so mirror the active mode onto process.env too (in memory, never on disk).
+ */
+function syncProcessEnv(managed: Set<string>, active: Record<string, string>): void {
+  for (const k of managed) {
+    if (!originalEnv.has(k)) {
+      originalEnv.set(k, process.env[k]);
+    }
+    const v = k in active ? active[k] : originalEnv.get(k);
+    if (v === undefined) {
+      delete process.env[k];
+    } else {
+      process.env[k] = v;
+    }
+  }
+}
+
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   // Keep keys out of VS Code's on-disk state: re-applied on every activation instead.
   context.environmentVariableCollection.persistent = false;
@@ -192,12 +213,14 @@ async function apply(context: vscode.ExtensionContext, mode: ModeDef): Promise<M
       mode = enabledModes().find((m) => !m.secret && !m.env) ?? byId('claude-max')!;
     }
   }
-  for (const [k, v] of Object.entries(mode.env ?? {})) {
+  const active: Record<string, string> = { ...(mode.env ?? {}) };
+  if (mode.envVar && mode.secret && key) {
+    active[mode.envVar] = key;
+  }
+  for (const [k, v] of Object.entries(active)) {
     env.replace(k, v);
   }
-  if (mode.envVar && mode.secret && key) {
-    env.replace(mode.envVar, key);
-  }
+  syncProcessEnv(managed, active);
   await context.globalState.update(MODE_KEY, mode.id);
   statusItem.text = `$(${mode.icon}) ${mode.label}`;
   statusItem.tooltip = `${mode.desc}. Click to switch.${isClaudeApi(mode) ? ' Remote Control is unavailable in this mode.' : ''}`;
