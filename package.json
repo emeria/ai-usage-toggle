@@ -2,7 +2,7 @@
   "name": "ai-usage-toggle",
   "displayName": "AI Usage Toggle",
   "description": "Switch between account/subscription and API-key usage for Claude, Gemini, and OpenAI from the status bar.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "emeria",
   "license": "MIT",
   "icon": "icon.png",
